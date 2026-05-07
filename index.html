@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Electron Browser</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #1a1a1a; color: #fff; height: 100vh; display: flex; flex-direction: column; }
+        .toolbar { display: flex; align-items: center; gap: 8px; padding: 10px 15px; background: #2d2d2d; }
+        .nav-btn { width: 36px; height: 36px; border: none; border-radius: 8px; background: #3d3d3d; color: #fff; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        .nav-btn:hover { background: #4d4d4d; }
+        .nav-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+        .url-bar { flex: 1; padding: 10px 15px; border: none; border-radius: 8px; font-size: 14px; background: #1a1a1a; color: #fff; outline: none; }
+        .url-bar:focus { box-shadow: 0 0 0 2px #0066ff; }
+        .go-btn { padding: 10px 20px; border: none; border-radius: 8px; background: #0066ff; color: #fff; font-weight: 600; cursor: pointer; }
+        .go-btn:hover { background: #0055dd; }
+        .content { flex: 1; background: #fff; }
+        webview { width: 100%; height: 100%; }
+        .status { padding: 5px 15px; background: #2d2d2d; font-size: 12px; color: #888; }
+    </style>
+</head>
+<body>
+    <div class="toolbar">
+        <button class="nav-btn" id="backBtn" title="Back" disabled>←</button>
+        <button class="nav-btn" id="forwardBtn" title="Forward" disabled>→</button>
+        <button class="nav-btn" id="refreshBtn" title="Refresh">⟳</button>
+        <button class="nav-btn" id="homeBtn" title="Home">⌂</button>
+        <input type="url" class="url-bar" id="urlBar" value="https://www.google.com">
+        <button class="go-btn" onclick="navigate()">Go</button>
+    </div>
+    <div class="content">
+        <webview id="webview" src="https://www.google.com" allowfullscreen></webview>
+    </div>
+    <div class="status" id="status">Ready</div>
+
+    <script>
+        const webview = document.getElementById('webview');
+        const urlBar = document.getElementById('urlBar');
+        const backBtn = document.getElementById('backBtn');
+        const forwardBtn = document.getElementById('forwardBtn');
+        const status = document.getElementById('status');
+
+        webview.addEventListener('did-navigate', updateUI);
+        webview.addEventListener('did-navigate-in-page', updateUI);
+        webview.addEventListener('page-title-updated', (e) => { document.title = e.title; });
+        webview.addEventListener('did-fail-load', (e) => { status.textContent = 'Load failed: ' + e.errorDescription; });
+        webview.addEventListener('did-finish-load', () => { status.textContent = 'Loaded'; });
+
+        function updateUI() {
+            urlBar.value = webview.getURL();
+            backBtn.disabled = !webview.canGoBack();
+            forwardBtn.disabled = !webview.canGoForward();
+        }
+
+        function navigate() {
+            let url = urlBar.value.trim();
+            if (!url.startsWith('http://') && !url.startsWith('https://')) {
+                url = 'https://' + url;
+            }
+            webview.src = url;
+        }
+
+        urlBar.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') navigate();
+        });
+
+        backBtn.addEventListener('click', () => webview.goBack());
+        forwardBtn.addEventListener('click', () => webview.goForward());
+        refreshBtn.addEventListener('click', () => webview.reload());
+        homeBtn.addEventListener('click', () => { webview.src = 'https://www.google.com'; });
+
+        updateUI();
+    </script>
+</body>
+</html>

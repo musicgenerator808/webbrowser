@@ -1,0 +1,13 @@
+{
+  "name": "electron-browser",
+  "version": "1.0.0",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron . --no-sandbox --disable-setuid-sandbox --disable-gpu --disable-dev-shm-usage --proxy-server='direct://' --proxy-bypass-list='*'"
+  },
+  "dependencies": {
+    "electron": "^30.0.0",
+    "express": "^4.19.2",
+    "http-proxy-middleware": "^3.0.0"
+  }
+}
