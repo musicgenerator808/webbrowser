@@ -1,14 +1,23 @@
 const http = require('http');
 const { spawn } = require('child_process');
 
+// Функция для логирования с таймстампом
+const log = (message) => {
+    console.log(`[AudioServer ${new Date().toISOString()}] ${message}`);
+};
+
+const errorLog = (message) => {
+    console.error(`[AudioServer ERROR ${new Date().toISOString()}] ${message}`);
+};
+
 const server = http.createServer((req, res) => {
+    log('Client connected to audio stream');
+    
     res.writeHead(200, {
         'Content-Type': 'audio/mpeg',
         'Transfer-Encoding': 'chunked',
         'Access-Control-Allow-Origin': '*'
     });
-
-    console.log('Client connected to audio stream');
 
     // Record from PulseAudio virtual sink 'remote.monitor' - low latency with proper timestamps
     const ffmpeg = spawn('ffmpeg', [
@@ -26,19 +35,42 @@ const server = http.createServer((req, res) => {
         env: { ...process.env, PULSE_SERVER: 'unix:/var/run/pulse/native' }
     });
 
+    ffmpeg.on('error', (err) => {
+        errorLog(`FFmpeg spawn error: ${err.message}`);
+        res.end();
+    });
+
+    ffmpeg.on('exit', (code, signal) => {
+        if (code !== null && code !== 0) {
+            errorLog(`FFmpeg exited with code ${code}, signal ${signal}`);
+        }
+    });
+
     ffmpeg.stdout.pipe(res);
 
     ffmpeg.stderr.on('data', (data) => {
         // Выводим ошибки ffmpeg в консоль Railway для отладки
-        console.error(`ffmpeg: ${data}`); 
+        errorLog(`FFmpeg stderr: ${data}`); 
     });
 
     req.on('close', () => {
-        console.log('Client disconnected from audio stream');
-        ffmpeg.kill('SIGKILL');
+        log('Client disconnected from audio stream');
+        try {
+            ffmpeg.kill('SIGKILL');
+        } catch (err) {
+            errorLog(`Error killing FFmpeg: ${err.message}`);
+        }
+    });
+
+    req.on('error', (err) => {
+        errorLog(`Request error: ${err.message}`);
     });
 });
 
-server.listen(8000, () => {
-    console.log('Audio streaming server listening on port 8000');
+server.on('error', (err) => {
+    errorLog(`Server error: ${err.message}`);
+});
+
+server.listen(8000, '0.0.0.0', () => {
+    log('Audio streaming server listening on port 8000');
 });
